@@ -18,7 +18,8 @@ app = FastAPI(
 
 
 class DetectRequest(BaseModel):
-    csv_path: str = Field(default="data/netflow_logs.csv", description="Path to a NetFlow-style CSV file.")
+    run_detection: bool = Field(default=True)
+    csv_path: str = Field(default="fake_logs.csv", description="Path to a NetFlow-style CSV file.")
     threshold: float = Field(default=70.0, ge=0.0, le=100.0)
     contamination: float = Field(default=0.08, gt=0.0, lt=0.5)
     max_incidents: int = Field(default=20, ge=1, le=100)
@@ -35,6 +36,9 @@ def health() -> HealthResponse:
 
 @app.post("/detect")
 def detect(request: DetectRequest) -> dict[str, Any]:
+    if not request.run_detection:
+        return {"flagged_count": 0, "incident_count": 0, "incidents": []}
+
     try:
         flagged = detect_anomalies(
             csv_path=Path(request.csv_path),
@@ -46,6 +50,7 @@ def detect(request: DetectRequest) -> dict[str, Any]:
 
     if flagged.empty:
         return {
+            "flagged_count": 0,
             "threshold": request.threshold,
             "incident_count": 0,
             "incidents": [],
@@ -65,19 +70,29 @@ def detect(request: DetectRequest) -> dict[str, Any]:
 
         incidents.append(
             {
+                "timestamp": row_details.get("timestamp"),
+                "src_ip": row_details.get("src_ip"),
+                "dst_ip": row_details.get("dst_ip"),
+                "port": int(row_details.get("port")),
+                "protocol": row_details.get("protocol"),
+                "bytes_sent": int(row_details.get("bytes_sent")),
+                "duration": float(row_details.get("duration")),
+                "packets": int(row_details.get("packets")),
                 "anomaly_score": float(row["anomaly_score"]),
                 "row_details": row_details,
                 "anomaly_description": description,
-                "matched_incident": {
+                "matched_incident": match.incident_type,
+                "remediation": match.resolution,
+                "matched_incident_details": {
                     "incident_type": match.incident_type,
                     "description": match.description,
                     "similarity": match.similarity,
                 },
-                "remediation": match.resolution,
             }
         )
 
     return {
+        "flagged_count": len(incidents),
         "threshold": request.threshold,
         "incident_count": len(incidents),
         "incidents": incidents,

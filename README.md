@@ -61,9 +61,60 @@ Module 3, Vector Store and RAG Agent:
 Module 4, n8n Orchestration and Slack Alert:
 `netguard_ai/api.py` exposes `POST /detect`. The n8n workflow calls that route, checks whether a flagged incident exists and whether its score is above `70`, then sends a formatted Slack alert containing anomaly details and remediation text.
 
+## Expected Pull-And-Run Flow
+
+Stage 1, generate logs:
+
+```bash
+python generate_logs.py
+```
+
+Creates `fake_logs.csv` with exactly 500 rows: 480 normal rows and 20 obvious anomalies. The columns are `timestamp`, `src_ip`, `dst_ip`, `port`, `protocol`, `bytes_sent`, `duration`, and `packets`.
+
+Stage 2, build the FAISS index:
+
+```bash
+python build_index.py
+```
+
+Creates:
+
+```text
+vector_store/faiss_index.bin
+vector_store/incidents_map.json
+```
+
+Stage 3, run FastAPI:
+
+```bash
+uvicorn api.main:app --reload --port 8000
+```
+
+Open `http://localhost:8000/docs` to see Swagger UI with `/detect`.
+
+Stage 4, call `/detect`:
+
+```bash
+curl -X POST http://localhost:8000/detect ^
+  -H "Content-Type: application/json" ^
+  -d "{\"run_detection\":true}"
+```
+
+The response includes `flagged_count` and an `incidents` list. Each incident has `src_ip`, `dst_ip`, `port`, `bytes_sent`, `duration`, `packets`, `anomaly_score`, `matched_incident`, and `remediation`.
+
+Stage 5, run n8n:
+
+```bash
+docker compose up -d n8n
+```
+
+Import `workflows/netguard_n8n_workflow.json`, add your Slack credentials, and activate it. The IF node blocks Slack when `flagged_count` is `0`; otherwise it sends one formatted alert with each flagged incident as a separate block.
+
 ## Project Structure
 
 ```text
+api/
+  main.py         FastAPI import path for uvicorn api.main:app
 netguard_ai/
   api.py          FastAPI app and /detect route
   detector.py     Isolation Forest detection logic
@@ -76,6 +127,9 @@ scripts/
   detect_csv.py
 workflows/
   netguard_n8n_workflow.json
+build_index.py
+generate_logs.py
+main.py
 docker-compose.yml
 requirements.txt
 ```
@@ -93,19 +147,19 @@ The first RAG run downloads `sentence-transformers/all-MiniLM-L6-v2` from Huggin
 ## Generate Traffic Logs
 
 ```bash
-python scripts/generate_logs.py --rows 500 --output data/netflow_logs.csv
+python generate_logs.py
 ```
 
 ## Run Detection From CLI
 
 ```bash
-python scripts/detect_csv.py --csv data/netflow_logs.csv --threshold 70
+python scripts/detect_csv.py --csv fake_logs.csv --threshold 70
 ```
 
 ## Run FastAPI
 
 ```bash
-uvicorn netguard_ai.api:app --reload
+uvicorn api.main:app --reload --port 8000
 ```
 
 Then call:
@@ -113,7 +167,7 @@ Then call:
 ```bash
 curl -X POST http://127.0.0.1:8000/detect ^
   -H "Content-Type: application/json" ^
-  -d "{\"csv_path\":\"data/netflow_logs.csv\",\"threshold\":70}"
+  -d "{\"run_detection\":true}"
 ```
 
 ## n8n Local Orchestration
@@ -136,27 +190,18 @@ The API response includes `anomaly_score`, row details, matched historical incid
 
 ```json
 {
-  "threshold": 70,
-  "incident_count": 1,
+  "flagged_count": 1,
   "incidents": [
     {
-      "anomaly_score": 100.0,
-      "row_details": {
-        "timestamp": "2026-06-06T12:00:00+00:00",
-        "src_ip": "10.1.2.3",
-        "dst_ip": "192.168.1.44",
-        "port": 4444,
-        "protocol": "TCP",
-        "bytes_sent": 5000000,
-        "duration": 220.5,
-        "packets": 7000
-      },
-      "matched_incident": {
-        "incident_type": "Suspicious Reverse Shell",
-        "description": "A host initiated high-volume outbound TCP traffic to port 4444, a port commonly used by reverse shell tooling.",
-        "similarity": 0.82
-      },
-      "remediation": "Disconnect the host from the network, collect volatile evidence, terminate suspicious processes, and review recent authentication and PowerShell logs."
+      "src_ip": "192.168.1.45",
+      "dst_ip": "185.23.44.1",
+      "port": 31337,
+      "bytes_sent": 967000,
+      "duration": 0.03,
+      "packets": 910,
+      "anomaly_score": 91.0,
+      "matched_incident": "Port Scan",
+      "remediation": "Block source IP at firewall. Enable IDS rule for rare ports. Review outbound traffic logs."
     }
   ]
 }

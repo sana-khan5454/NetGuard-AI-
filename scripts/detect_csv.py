@@ -13,7 +13,7 @@ from netguard_ai.rag import get_retriever
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run NetGuard AI anomaly detection against a CSV.")
-    parser.add_argument("--csv", type=Path, default=Path("data/netflow_logs.csv"))
+    parser.add_argument("--csv", type=Path, default=Path("fake_logs.csv"))
     parser.add_argument("--threshold", type=float, default=70.0)
     parser.add_argument("--max-incidents", type=int, default=20)
     args = parser.parse_args()

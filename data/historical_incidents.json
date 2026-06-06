@@ -1,63 +1,74 @@
 [
   {
+    "id": "INC-001",
     "incident_type": "Data Exfiltration",
-    "description": "A workstation sent several gigabytes of outbound TCP traffic to an unfamiliar internal host over a long duration with unusually high packet volume.",
-    "resolution": "Isolate the source host, preserve packet captures, verify the destination owner, rotate exposed credentials, and block the destination until business justification is confirmed."
+    "description": "A host sent unusually high bytes to an external or unfamiliar destination over a suspicious short session.",
+    "resolution": "Isolate endpoint. Capture traffic dump. Notify security team. Review DLP policies."
   },
   {
+    "id": "INC-002",
     "incident_type": "Port Scan",
-    "description": "A client generated thousands of packets in under one second while probing multiple TCP services, indicating reconnaissance or automated scanning.",
-    "resolution": "Rate-limit the source, review endpoint process activity, block scanning tools, and check firewall logs for follow-on connection attempts."
+    "description": "A client generated a short-duration burst with high packets on rare TCP ports such as 31337 or 4444.",
+    "resolution": "Block source IP at firewall. Enable IDS rule for rare ports. Review outbound traffic logs."
   },
   {
+    "id": "INC-003",
     "incident_type": "Backdoor Port Activity",
-    "description": "Traffic appeared on rare TCP port 31337 with elevated bytes and packets, matching historical backdoor command-and-control behavior.",
-    "resolution": "Quarantine both endpoints, inspect for persistence mechanisms, block the rare port at network boundaries, and run malware triage on the source."
+    "description": "Traffic appeared on rare TCP port 31337 with elevated bytes and packet volume.",
+    "resolution": "Quarantine both endpoints. Inspect persistence mechanisms. Block port 31337 at network boundaries."
   },
   {
+    "id": "INC-004",
     "incident_type": "Suspicious Reverse Shell",
     "description": "A host initiated high-volume outbound TCP traffic to port 4444, a port commonly used by reverse shell tooling.",
-    "resolution": "Disconnect the host from the network, collect volatile evidence, terminate suspicious processes, and review recent authentication and PowerShell logs."
+    "resolution": "Disconnect the host from the network. Collect volatile evidence. Terminate suspicious processes."
   },
   {
+    "id": "INC-005",
     "incident_type": "DNS Tunneling",
-    "description": "A source sent repeated UDP traffic with high packet counts to DNS service ports and abnormal byte volume for normal name resolution.",
-    "resolution": "Inspect DNS query payloads, block suspicious domains, force DNS through approved resolvers, and investigate the source for data staging activity."
+    "description": "A source sent repeated UDP traffic with abnormal byte volume for normal name resolution.",
+    "resolution": "Inspect DNS query payloads. Block suspicious domains. Force DNS through approved resolvers."
   },
   {
+    "id": "INC-006",
     "incident_type": "Database Dump",
-    "description": "An internal server transmitted unusually large byte volumes over database ports after a short burst of high packet activity.",
-    "resolution": "Pause database access for the account, review query logs, verify backup jobs, and rotate credentials if the transfer was not scheduled."
+    "description": "An internal server transmitted unusually large byte volumes over database ports.",
+    "resolution": "Pause database access for the account. Review query logs. Rotate credentials if the transfer was not scheduled."
   },
   {
+    "id": "INC-007",
     "incident_type": "Credential Stuffing",
-    "description": "A host generated many short TCP sessions with low duration and moderate packet counts toward authentication services.",
-    "resolution": "Apply temporary source blocking, inspect authentication failures, enforce MFA, and reset accounts with repeated failed logins."
+    "description": "A host generated many short TCP sessions with moderate packets toward authentication services.",
+    "resolution": "Apply temporary source blocking. Inspect authentication failures. Enforce MFA for targeted accounts."
   },
   {
+    "id": "INC-008",
     "incident_type": "ICMP Flood",
-    "description": "ICMP traffic showed unusually high packet counts over a short duration, consistent with a ping flood or availability attack.",
-    "resolution": "Apply ICMP rate limits, verify service availability, identify upstream sources, and tune monitoring thresholds after containment."
+    "description": "ICMP traffic showed unusually high packet counts over a short duration.",
+    "resolution": "Apply ICMP rate limits. Verify service availability. Identify upstream sources."
   },
   {
+    "id": "INC-009",
     "incident_type": "Unapproved Admin Access",
     "description": "A workstation sent abnormal traffic to SSH or remote administration ports outside the normal maintenance window.",
-    "resolution": "Validate the administrator identity, review privileged session logs, disable unauthorized remote access, and rotate privileged credentials."
+    "resolution": "Validate administrator identity. Review privileged session logs. Disable unauthorized remote access."
   },
   {
+    "id": "INC-010",
     "incident_type": "Botnet Beaconing",
-    "description": "A device repeatedly contacted an unusual port with consistent packet patterns and byte volume, suggesting automated beacon traffic.",
-    "resolution": "Block the destination, collect endpoint telemetry, compare timing patterns with threat intelligence, and reimage the host if compromise is confirmed."
+    "description": "A device repeatedly contacted an unusual port with consistent packet patterns and elevated byte volume.",
+    "resolution": "Block the destination. Collect endpoint telemetry. Compare timing patterns with threat intelligence."
   },
   {
+    "id": "INC-011",
     "incident_type": "Web Shell Upload",
-    "description": "A web server produced a sudden burst of outbound TCP traffic after short inbound activity on HTTP or HTTPS service ports.",
-    "resolution": "Review web server access logs, search for recently modified scripts, remove malicious files, patch the vulnerable application, and rotate application secrets."
+    "description": "A web server produced a sudden burst of outbound TCP traffic after short inbound HTTP activity.",
+    "resolution": "Review web server access logs. Search for recently modified scripts. Remove malicious files."
   },
   {
+    "id": "INC-012",
     "incident_type": "Lateral Movement",
-    "description": "An internal host communicated with several private destinations using high packet counts on administrative or database ports.",
-    "resolution": "Segment the source host, inspect endpoint detections, review account usage across hosts, and block east-west access that is not explicitly required."
+    "description": "An internal host communicated with private destinations using high packet counts on administrative ports.",
+    "resolution": "Segment the source host. Inspect endpoint detections. Review account usage across hosts."
   }
 ]
-

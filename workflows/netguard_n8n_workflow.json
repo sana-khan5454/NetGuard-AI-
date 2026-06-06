@@ -2,13 +2,22 @@
   "name": "NetGuard AI Incident Response",
   "nodes": [
     {
-      "parameters": {},
-      "id": "b5e7d694-c58d-41e7-93e1-59641bd1df4d",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "d3fbf20f-c341-40c5-a0bd-f7bceef9a972",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
       "position": [
-        220,
+        180,
         300
       ]
     },
@@ -18,15 +27,15 @@
         "url": "http://host.docker.internal:8000/detect",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\n  \"csv_path\": \"data/netflow_logs.csv\",\n  \"threshold\": 70,\n  \"max_incidents\": 1\n}",
+        "jsonBody": "{\n  \"run_detection\": true\n}",
         "options": {}
       },
-      "id": "3f907d3e-c7c7-4656-9b41-71386d8f7e52",
+      "id": "62a1db35-87bf-4df7-bda7-62bc6ce9da50",
       "name": "Call /detect",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        460,
+        440,
         300
       ]
     },
@@ -41,18 +50,9 @@
           },
           "conditions": [
             {
-              "id": "0f4ee9df-eb2d-41f3-b976-0e40e976e547",
-              "leftValue": "={{ $json.incident_count }}",
+              "id": "4fdc5476-7bff-4cbb-9074-54fbeb4d6c9a",
+              "leftValue": "={{ $json.flagged_count }}",
               "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            },
-            {
-              "id": "efcc3642-c9f7-4be6-b365-fe02f57c05fb",
-              "leftValue": "={{ $json.incidents[0]?.anomaly_score || 0 }}",
-              "rightValue": 70,
               "operator": {
                 "type": "number",
                 "operation": "gt"
@@ -63,8 +63,8 @@
         },
         "options": {}
       },
-      "id": "df73ee7f-b61b-4536-aafb-64c39af75d4e",
-      "name": "Score > 70?",
+      "id": "df0d7d95-9bd3-47b1-9ed1-9ad8e4051fbb",
+      "name": "Any Incidents?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -77,21 +77,21 @@
         "assignments": {
           "assignments": [
             {
-              "id": "2978ee95-fd52-4961-8cb1-f6440bcc2029",
+              "id": "f7d7fdde-5a9a-42be-a1ee-e37cd9703325",
               "name": "slack_message",
               "type": "string",
-              "value": "=NetGuard AI Alert\nScore: {{ $json.incidents[0].anomaly_score }}\nSource: {{ $json.incidents[0].row_details.src_ip }}\nDestination: {{ $json.incidents[0].row_details.dst_ip }}\nProtocol/Port: {{ $json.incidents[0].row_details.protocol }}/{{ $json.incidents[0].row_details.port }}\nBytes: {{ $json.incidents[0].row_details.bytes_sent }}\nPackets: {{ $json.incidents[0].row_details.packets }}\nMatched Incident: {{ $json.incidents[0].matched_incident.incident_type }}\nRemediation: {{ $json.incidents[0].remediation }}"
+              "value": "=🚨 NetGuard Alert\nIncidents Detected: {{ $json.flagged_count }}\n─────────────────\n{{ $json.incidents.map(i => `🔴 Score: ${Math.round(i.anomaly_score)}/100 | Port ${i.port} | ${i.src_ip} → ${i.dst_ip}\\nType: ${i.matched_incident}\\nAction: ${i.remediation}`).join('\\n\\n') }}\n─────────────────\n⏱ Detected at: {{ $now.toFormat('yyyy-MM-dd HH:mm:ss') }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "629c6acf-21d6-43ba-9728-fd50f70644f4",
+      "id": "a917e31f-093a-4d3e-9850-9917f1ce335f",
       "name": "Format Slack Alert",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        940,
+        960,
         200
       ]
     },
@@ -104,12 +104,12 @@
         "text": "={{ $json.slack_message }}",
         "otherOptions": {}
       },
-      "id": "5bff1d4b-39ec-426f-8abe-5915559b8a81",
+      "id": "9804e883-f515-4d9e-a969-d47922d505db",
       "name": "Send Slack Alert",
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.3,
       "position": [
-        1180,
+        1220,
         200
       ],
       "credentials": {
@@ -121,7 +121,7 @@
     }
   ],
   "connections": {
-    "Manual Trigger": {
+    "Schedule Trigger": {
       "main": [
         [
           {
@@ -136,14 +136,14 @@
       "main": [
         [
           {
-            "node": "Score > 70?",
+            "node": "Any Incidents?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Score > 70?": {
+    "Any Incidents?": {
       "main": [
         [
           {
@@ -175,5 +175,5 @@
   "tags": [],
   "triggerCount": 0,
   "updatedAt": "2026-06-06T00:00:00.000Z",
-  "versionId": "8be2a72f-9726-4778-a9da-c5b7f2f04b07"
+  "versionId": "d661ff2a-5037-4ff1-b795-ad6d48e4fcec"
 }
