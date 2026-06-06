@@ -1,0 +1,179 @@
+{
+  "name": "NetGuard AI Incident Response",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b5e7d694-c58d-41e7-93e1-59641bd1df4d",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/detect",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"csv_path\": \"data/netflow_logs.csv\",\n  \"threshold\": 70,\n  \"max_incidents\": 1\n}",
+        "options": {}
+      },
+      "id": "3f907d3e-c7c7-4656-9b41-71386d8f7e52",
+      "name": "Call /detect",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0f4ee9df-eb2d-41f3-b976-0e40e976e547",
+              "leftValue": "={{ $json.incident_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "efcc3642-c9f7-4be6-b365-fe02f57c05fb",
+              "leftValue": "={{ $json.incidents[0]?.anomaly_score || 0 }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "df73ee7f-b61b-4536-aafb-64c39af75d4e",
+      "name": "Score > 70?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2978ee95-fd52-4961-8cb1-f6440bcc2029",
+              "name": "slack_message",
+              "type": "string",
+              "value": "=NetGuard AI Alert\nScore: {{ $json.incidents[0].anomaly_score }}\nSource: {{ $json.incidents[0].row_details.src_ip }}\nDestination: {{ $json.incidents[0].row_details.dst_ip }}\nProtocol/Port: {{ $json.incidents[0].row_details.protocol }}/{{ $json.incidents[0].row_details.port }}\nBytes: {{ $json.incidents[0].row_details.bytes_sent }}\nPackets: {{ $json.incidents[0].row_details.packets }}\nMatched Incident: {{ $json.incidents[0].matched_incident.incident_type }}\nRemediation: {{ $json.incidents[0].remediation }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "629c6acf-21d6-43ba-9728-fd50f70644f4",
+      "name": "Format Slack Alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        940,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "post",
+        "channel": "#security-alerts",
+        "text": "={{ $json.slack_message }}",
+        "otherOptions": {}
+      },
+      "id": "5bff1d4b-39ec-426f-8abe-5915559b8a81",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1180,
+        200
+      ],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_SLACK_CREDENTIAL_ID",
+          "name": "Slack OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Call /detect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call /detect": {
+      "main": [
+        [
+          {
+            "node": "Score > 70?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score > 70?": {
+      "main": [
+        [
+          {
+            "node": "Format Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Format Slack Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-06-06T00:00:00.000Z",
+  "versionId": "8be2a72f-9726-4778-a9da-c5b7f2f04b07"
+}

@@ -43,7 +43,13 @@ class IncidentRetriever:
         except ImportError as exc:
             raise RuntimeError("Install sentence-transformers before running RAG retrieval.") from exc
 
-        return SentenceTransformer(self.model_name)
+        try:
+            return SentenceTransformer(self.model_name)
+        except Exception as exc:
+            raise RuntimeError(
+                f"Unable to load embedding model '{self.model_name}'. "
+                "Check internet access for the first download or verify the model exists in the local cache."
+            ) from exc
 
     def _embed(self, texts: list[str]) -> np.ndarray:
         embeddings = self.model.encode(texts, normalize_embeddings=True)
@@ -77,4 +83,3 @@ class IncidentRetriever:
 @lru_cache(maxsize=1)
 def get_retriever() -> IncidentRetriever:
     return IncidentRetriever()
-
